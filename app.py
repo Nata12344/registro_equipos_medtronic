@@ -5,7 +5,7 @@ from PIL import Image
 st.set_page_config(page_title="Registro Medtronic", page_icon="🩺", layout="centered")
 
 # Layout con columnas para alinear el logo más a la derecha
-col1, col2, col3 = st.columns([0.5, 1.5, 1])
+col1, col2, col3 = st.columns([2, 2, 1])
 
 with col3:
     try:
