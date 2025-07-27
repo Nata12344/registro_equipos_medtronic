@@ -1,124 +1,140 @@
-# streamlit_app.py
+# app.py
 import streamlit as st
 from PIL import Image
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-import base64
 import io
 
-st.set_page_config(page_title="Registro de equipos - Medtronic", layout="centered")
-st.title("Registro de equipos - Medtronic")
+st.set_page_config(page_title="Registro de Equipo - Medtronic", layout="centered")
 
-st.sidebar.title("Configuración")
-tipo_operacion = st.sidebar.radio("Tipo de operación", ["Ingreso", "Salida"])
+# Correos
+CORREOS_INGENIEROS = {
+    "Nicolle Riaño": "nicolle.n.riano@medtronic.com"
+}
 
-cliente = st.text_input("Cliente")
-ingeniero = st.selectbox("Ingeniero", ["Nicolle Riaño"])
-movimiento = st.text_input("Movimiento / Delivery")
+# Logo
+st.image("logo_medtronic.png", width=200)
 
-num_equipos = st.number_input("Cantidad de equipos", min_value=1, max_value=10, value=1, step=1)
+# Pantalla de inicio
+if "tipo_operacion" not in st.session_state:
+    st.session_state.tipo_operacion = None
 
-# Entrada de datos por equipo
-info_equipos = []
-st.subheader("Equipos")
-for i in range(num_equipos):
-    st.markdown(f"### Equipo {i+1}")
-    tipo = st.selectbox(f"Tipo de equipo {i+1}", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{i}")
-    serial = st.text_input(f"Serial {i+1}", key=f"serial_{i}")
-    accesorios = st.text_input(f"Accesorios {i+1}", key=f"accesorios_{i}")
-    obs = st.multiselect(f"Observaciones físicas {i+1}", ["Carcasa rayada", "Golpes visibles", "Pantalla rayada", "Pieza rotos", "Cable dañado", "otro"], key=f"obs_{i}")
-    obs_otro = ""
-    if "otro" in obs:
-        obs_otro = st.text_input(f"Observación adicional {i+1}", key=f"otro_{i}")
-    llegada = st.multiselect(f"{'Llegada' if tipo_operacion == 'Ingreso' else 'Salida'} del equipo {i+1}", ["Caja original", "Caja cartón", "Huacal", "Maletín", "Contenedor"], key=f"llegada_{i}")
-    fotos = st.file_uploader(f"Fotos del equipo {i+1} (mínimo 4)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=f"fotos_{i}")
+if st.session_state.tipo_operacion is None:
+    st.title("¿Qué deseas registrar?")
+    if st.button("Ingreso", use_container_width=True):
+        st.session_state.tipo_operacion = "Ingreso"
+    if st.button("Salida", use_container_width=True):
+        st.session_state.tipo_operacion = "Salida"
+    st.stop()
 
-    info_equipos.append({
-        "tipo": tipo,
-        "serial": serial,
-        "accesorios": accesorios,
-        "observaciones": obs,
-        "otro": obs_otro,
-        "llegada": llegada,
-        "fotos": fotos
-    })
+# Datos generales
+st.title(f"{st.session_state.tipo_operacion} - Registro de equipos")
+cliente = st.text_input("Cliente:")
+ingeniero = st.selectbox("Ingeniero:", list(CORREOS_INGENIEROS.keys()))
+movimiento = st.text_input("Movimiento / Delivery:")
 
-if st.button("Enviar informe"):
+# Control dinámico de equipos
+if "equipos" not in st.session_state:
+    st.session_state.equipos = []
+
+if st.button("➕ Agregar nuevo equipo"):
+    st.session_state.equipos.append({})
+
+# Renderizar equipos
+for i, equipo in enumerate(st.session_state.equipos):
+    with st.expander(f"Equipo {i + 1}", expanded=True):
+        col1, col2 = st.columns(2)
+        tipo = col1.selectbox("Tipo de equipo", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{i}")
+        serial = col2.text_input("Serial", key=f"serial_{i}")
+
+        observaciones_opciones = ["Carcasa rayada", "Golpes visibles", "Pantalla rayada", "Pieza rotos", "Cable dañado", "otro"]
+        obs_seleccionadas = st.multiselect("Observaciones físicas", observaciones_opciones, key=f"obs_{i}")
+        obs_otro = ""
+        if "otro" in obs_seleccionadas:
+            obs_otro = st.text_input("¿Cuál otra observación?", key=f"otro_{i}")
+
+        llegada_label = "¿Cómo llegó el equipo?" if st.session_state.tipo_operacion == "Ingreso" else "¿Cómo sale el equipo?"
+        llegada_formas = ["Caja original", "Caja cartón", "Huacal", "Maletín", "Contenedor"]
+        llegada = st.multiselect(llegada_label, llegada_formas, key=f"llegada_{i}")
+
+        accesorios = st.text_input("Accesorios:", key=f"accesorios_{i}")
+        fotos = st.file_uploader("Fotos del equipo (mínimo 4)", accept_multiple_files=True, type=["png", "jpg", "jpeg"], key=f"fotos_{i}")
+
+# Botón para enviar
+if st.button("📤 Enviar reporte"):
+
+    errores = []
+    for i in range(len(st.session_state.equipos)):
+        fotos = st.session_state[f"fotos_{i}"]
+        if len(fotos) < 4:
+            errores.append(f"Equipo {i + 1} debe tener al menos 4 fotos.")
+    
+    if not ingeniero:
+        errores.append("Debes seleccionar un ingeniero.")
+    
+    if errores:
+        for error in errores:
+            st.error(error)
+        st.stop()
+
+    # Construir y enviar correo
     try:
-        for i, eq in enumerate(info_equipos):
-            if len(eq["fotos"]) < 4:
-                st.error(f"El equipo {i+1} debe tener al menos 4 fotos.")
-                st.stop()
-
         from_email = "rianonicolle1101@gmail.com"
         password = "pmfb qjwu rnyc bojy"
-        to_email = "nicolle.n.riano@medtronic.com, mejiah5@medtronic.com"
+        to_emails = [CORREOS_INGENIEROS[ingeniero], "mejiah5@medtronic.com"]
 
         msg = MIMEMultipart('related')
-        msg['From'] = from_email
-        msg['To'] = to_email
-        msg['Subject'] = f"{tipo_operacion} ST - Movimiento/Delivery: {movimiento}"
+        msg["From"] = from_email
+        msg["To"] = ", ".join(to_emails)
+        msg["Subject"] = f"{st.session_state.tipo_operacion} ST - Movimiento: {movimiento}"
 
-        html = f"""
-        <html><body>
-        <p><b>{'Ingreso a Servicio Técnico' if tipo_operacion == 'Ingreso' else 'Salida de Servicio Técnico'}</b></p>
-        <p><b>Cliente:</b> {cliente}<br>
-        <b>Ingeniero:</b> {ingeniero}<br>
-        <b>Movimiento / Delivery:</b> {movimiento}</p>
-        <p><b>Equipos registrados:</b></p>
-        """
+        cuerpo_html = f"<html><body><h3>{st.session_state.tipo_operacion} de equipos</h3><p><b>Cliente:</b> {cliente}<br><b>Ingeniero:</b> {ingeniero}<br><b>Movimiento:</b> {movimiento}</p>"
 
-        imagenes = []
         cid_counter = 0
-        for i, eq in enumerate(info_equipos):
-            obs_text = ", ".join(eq["observaciones"])
-            if eq["otro"]:
-                obs_text += f", {eq['otro']}"
+        imagenes = []
 
-            llegada_text = ", ".join(eq["llegada"])
+        for i in range(len(st.session_state.equipos)):
+            tipo = st.session_state[f"tipo_{i}"]
+            serial = st.session_state[f"serial_{i}"]
+            obs = st.session_state[f"obs_{i}"]
+            llegada = st.session_state[f"llegada_{i}"]
+            accesorios = st.session_state[f"accesorios_{i}"]
+            fotos = st.session_state[f"fotos_{i}"]
+            obs_otro = st.session_state[f"otro_{i}"] if "otro" in obs else ""
 
-            html += f"""
-            <p><b>Equipo {i+1}:</b><br>
-            <b>- Tipo:</b> {eq['tipo']}<br>
-            <b>- Serial:</b> {eq['serial']}<br>
-            <b>- Accesorios:</b> {eq['accesorios']}<br>
-            <b>- Observaciones físicas:</b> {obs_text}<br>
-            <b>- Forma de {'llegada' if tipo_operacion == 'Ingreso' else 'salida'}:</b> {llegada_text}<br>
-            <b>- Número de fotos:</b> {len(eq['fotos'])}</p>
-            """
-            for foto in eq['fotos']:
-                cid = f"image{cid_counter}"
+            cuerpo_html += f"<p><b>Equipo {i+1}:</b><br>- Tipo: {tipo}<br>- Serial: {serial}<br>- Accesorios: {accesorios}<br>- Observaciones: {', '.join(obs)} {obs_otro}<br>- Llegada/Salida: {', '.join(llegada)}<br>"
+
+            for foto in fotos:
+                cid = f"img{cid_counter}"
                 cid_counter += 1
-                html += f'<img src="cid:{cid}" style="max-width:400px;"><br>'
-
-                img_bytes = foto.read()
-                img = MIMEImage(img_bytes)
+                cuerpo_html += f'<img src="cid:{cid}" style="max-width:300px;"><br>'
+                img = MIMEImage(foto.read())
                 img.add_header('Content-ID', f'<{cid}>')
                 img.add_header('Content-Disposition', 'inline', filename=foto.name)
                 imagenes.append(img)
 
-            html += "<br>"
+            cuerpo_html += "</p>"
 
-        html += """
-         <p style="font-style: italic; color: #555; font-size: 12px; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px;">
-         Este mensaje ha sido generado automáticamente por el Departamento de Servicio Técnico de <b>Medtronic</b>.
-         </p></body></html>
-        """
+        cuerpo_html += "<p><i>Este mensaje ha sido generado automáticamente por el Departamento de Servicio Técnico de Medtronic.</i></p></body></html>"
+        msg.attach(MIMEText(cuerpo_html, "html"))
 
-        msg.attach(MIMEText(html, 'html'))
         for img in imagenes:
             msg.attach(img)
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(from_email, password)
         server.send_message(msg)
         server.quit()
 
-        st.success("Correo enviado correctamente.")
+        st.success("✅ Correo enviado correctamente")
+        st.balloons()
+        st.session_state.tipo_operacion = None
+        st.session_state.equipos = []
+
     except Exception as e:
-        st.error(f"No se pudo enviar el correo: {e}")
+        st.error(f"❌ Error al enviar: {e}")
 
 
