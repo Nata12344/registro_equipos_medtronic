@@ -7,24 +7,45 @@ from email.mime.image import MIMEImage
 import base64
 import os
 
+# Configuración de página
+st.set_page_config(page_title="Registro Medtronic", layout="centered", page_icon="🩺")
+
+# Estilo visual
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: white;
+    }
+    .title {
+        text-align: center;
+        font-size: 22px;
+        color: #000000;
+        font-family: 'Arial', sans-serif;
+        margin-top: 20px;
+        margin-bottom: 30px;
+    }
+    .stButton>button {
+        width: 200px;
+        height: 40px;
+        background-color: #002d5d;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        margin: auto;
+        display: block;
+    }
+    .stButton>button:hover {
+        background-color: #0053a6;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # Datos iniciales
 correos_ingenieros = {
     "Nicolle Riaño": "nicolle.n.riano@medtronic.com"
 }
 
-st.set_page_config(layout="wide")
-st.markdown(
-    """
-    <style>
-    body, .stApp {
-        background-color: white;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Pantalla inicial
+# Estados iniciales
 if "step" not in st.session_state:
     st.session_state.step = "inicio"
 if "tipo_operacion" not in st.session_state:
@@ -40,17 +61,23 @@ def reiniciar():
 
 # Pantalla de inicio
 if st.session_state.step == "inicio":
+    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
+
+    try:
+        logo = Image.open("/mnt/data/fe208d28-cd21-4207-adb3-bb3e916d9641.png")
+        st.image(logo, width=200)
+    except:
+        st.warning("No se pudo cargar el logo.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<p class="title">¿Qué deseas registrar?</p>', unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        try:
-            logo = Image.open("logo_medtronic.png")
-            st.image(logo, width=200)
-        except Exception as e:
-            st.warning("No se pudo cargar el logo.")
-        st.title("¿Qué deseas registrar?")
         if st.button("Ingreso"):
             st.session_state.tipo_operacion = "Ingreso"
             st.session_state.step = "form"
+        st.write("")
         if st.button("Salida"):
             st.session_state.tipo_operacion = "Salida"
             st.session_state.step = "form"
@@ -67,11 +94,9 @@ if st.session_state.step == "form":
     st.divider()
     st.markdown("### Equipos registrados")
 
-    # Botón para agregar un nuevo equipo
     if st.button("Agregar equipo"):
         st.session_state.equipos.append({})
 
-    # Formulario por equipo
     for idx, equipo in enumerate(st.session_state.equipos):
         with st.expander(f"Equipo {idx + 1}", expanded=True):
             tipo = st.selectbox(f"Tipo de equipo {idx + 1}:", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{idx}")
@@ -93,7 +118,7 @@ if st.session_state.step == "form":
             st.markdown(f"**{llegada_label}**")
             llegada_formas = ["Caja original", "Caja cartón", "Huacal", "Maletín", "Contenedor"]
             formas = [f for f in llegada_formas if st.checkbox(f, key=f"{f}_{idx}")]
-            
+
             st.markdown("**Fotos del equipo (mínimo 4):**")
             fotos = st.file_uploader("Seleccionar fotos", accept_multiple_files=True, key=f"fotos_{idx}", type=["png", "jpg", "jpeg"])
 
@@ -108,7 +133,6 @@ if st.session_state.step == "form":
 
     st.divider()
 
-    # Enviar correo
     if st.button("Enviar reporte"):
         if not cliente or not ingeniero or not movimiento:
             st.error("Por favor completa todos los campos generales.")
