@@ -64,7 +64,7 @@ if st.session_state.step == "inicio":
     st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
 
     try:
-        logo = Image.open("/mnt/data/fe208d28-cd21-4207-adb3-bb3e916d9641.png")
+        logo = Image.open("logo_medtronic.png")
         st.image(logo, width=200)
     except:
         st.warning("No se pudo cargar el logo.")
