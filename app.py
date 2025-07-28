@@ -4,120 +4,209 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+import base64
 import os
 
-# Configuración inicial
-st.set_page_config(layout="wide")
-st.title("Registro de Equipos")
+# Configuración de página
+st.set_page_config(page_title="Registro Medtronic", layout="centered", page_icon="🩺")
 
-# Diccionario con correos de ingenieros
+# Estilo visual
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: white;
+    }
+    .title {
+        text-align: center;
+        font-size: 22px;
+        color: #000000;
+        font-family: 'Arial', sans-serif;
+        margin-top: 20px;
+        margin-bottom: 30px;
+    }
+    .stButton>button {
+        width: 200px;
+        height: 40px;
+        background-color: #002d5d;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        margin: auto;
+        display: block;
+    }
+    .stButton>button:hover {
+        background-color: #0053a6;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Datos iniciales
 correos_ingenieros = {
-    "Nicolle Riaño": "nicolle.n.riano@medtronic.com",
-    "Otro Ingeniero": "otro@medtronic.com"
+    "Nicolle Riaño": "nicolle.n.riano@medtronic.com"
 }
 
-# Sidebar con encabezado
-with st.sidebar:
-    st.image(
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Medtronic_logo.svg/2560px-Medtronic_logo.svg.png",
-        width=200,
-    )
-    st.markdown(
-        f"### {'Ingreso' if 'tipo_operacion' not in st.session_state else st.session_state.tipo_operacion} - Registro de equipos"
-    )
-    st.markdown(
-        "**Información confidencial**  
-        Uso exclusivo de Medtronic"
-    )
+# Estados iniciales
+if "step" not in st.session_state:
+    st.session_state.step = "inicio"
+if "tipo_operacion" not in st.session_state:
+    st.session_state.tipo_operacion = None
+if "equipos" not in st.session_state:
+    st.session_state.equipos = []
 
-# Operación
-tipo_operacion = st.radio("Selecciona el tipo de operación:", ["Ingreso", "Salida"])
-st.session_state.tipo_operacion = tipo_operacion
+# Función para reiniciar
+def reiniciar():
+    st.session_state.step = "inicio"
+    st.session_state.tipo_operacion = None
+    st.session_state.equipos = []
 
-# Formulario
-cliente = st.text_input("Cliente (hospital o Medtronic)")
-ingeniero = st.selectbox("Ingeniero responsable", list(correos_ingenieros.keys()))
-equipos = []
+# Pantalla de inicio
+if st.session_state.step == "inicio":
+    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
 
-st.markdown("### Agregar equipos")
+    try:
+        logo = Image.open("logo_medtronic.png")
+        st.image(logo, width=200)
+    except:
+        st.warning("No se pudo cargar el logo.")
 
-# Para almacenar info de equipos
-if "lista_equipos" not in st.session_state:
-    st.session_state.lista_equipos = []
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<p class="title">¿Qué deseas registrar?</p>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-with col1:
-    tipo_equipo = st.text_input("Tipo de equipo")
-    serial = st.text_input("Número de serie")
-with col2:
-    foto_entrada = st.file_uploader("Foto del equipo", type=["png", "jpg", "jpeg"])
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Ingreso"):
+            st.session_state.tipo_operacion = "Ingreso"
+            st.session_state.step = "form"
+        st.write("")
+        if st.button("Salida"):
+            st.session_state.tipo_operacion = "Salida"
+            st.session_state.step = "form"
 
-if st.button("Agregar equipo"):
-    if tipo_equipo and serial and foto_entrada:
-        st.session_state.lista_equipos.append({
-            "tipo": tipo_equipo,
-            "serial": serial,
-            "foto": foto_entrada
-        })
-        st.success("Equipo agregado correctamente.")
-    else:
-        st.warning("Por favor, completa todos los campos.")
+# Pantalla principal del formulario
+if st.session_state.step == "form":
+    st.markdown(f"### {st.session_state.tipo_operacion} - Registro de equipos")
+    st.markdown("#### Información general")
 
-# Mostrar lista de equipos agregados
-if st.session_state.lista_equipos:
-    st.markdown("### Equipos agregados")
-    for idx, equipo in enumerate(st.session_state.lista_equipos):
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.write(f"**{equipo['tipo']}** - Serial: {equipo['serial']}")
-        with col2:
-            if st.button("Eliminar", key=f"eliminar_{idx}"):
-                st.session_state.lista_equipos.pop(idx)
-                st.experimental_rerun()
+    cliente = st.text_input("Cliente:")
+    ingeniero = st.selectbox("Ingeniero:", list(correos_ingenieros.keys()))
+    movimiento = st.text_input("Movimiento / Delivery:")
 
-# Enviar correo
-if st.button("Enviar correo"):
-    if not cliente or not ingeniero or not st.session_state.lista_equipos:
-        st.error("Completa todos los campos antes de enviar.")
-    else:
-        try:
-            msg = MIMEMultipart("related")
-            msg["Subject"] = f"{tipo_operacion} de equipo - {cliente}"
-            msg["From"] = "tucorreo@dominio.com"
-            msg["To"] = correos_ingenieros[ingeniero]
+    st.divider()
+    st.markdown("### Equipos registrados")
 
-            # HTML del correo
-            html = f"""<html><body>
-            <p><b>{tipo_operacion} a Servicio Técnico</b></p>
-            <p><b>Cliente:</b> {cliente}<br>
-            <b>Ingeniero:</b> {ingeniero}</p>
-            <p><b>Equipos:</b></p><ul>"""
+    if st.button("Agregar equipo"):
+        st.session_state.equipos.append({})
 
-            for i, equipo in enumerate(st.session_state.lista_equipos):
-                cid = f"image{i}"
-                html += f"<li>{equipo['tipo']} - Serial: {equipo['serial']}<br><img src='cid:{cid}' width='300'></li><br>"
+    for idx, equipo in enumerate(st.session_state.equipos):
+        with st.expander(f"Equipo {idx + 1}", expanded=True):
+            tipo = st.selectbox(f"Tipo de equipo {idx + 1}:", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{idx}")
+            serial = st.text_input("Serial:", key=f"serial_{idx}")
+            accesorios = st.text_input("Accesorios:", key=f"accesorios_{idx}")
 
-                # Agregar imagen embebida
-                img_data = equipo["foto"].read()
-                image = MIMEImage(img_data, name=equipo["foto"].name)
-                image.add_header("Content-ID", f"<{cid}>")
-                msg.attach(image)
+            st.markdown("**Observaciones físicas:**")
+            observaciones = []
+            opciones = ["Carcasa rayada", "Golpes visibles", "Pantalla rayada", "Pieza rotos", "Cable dañado"]
+            for obs in opciones:
+                if st.checkbox(obs, key=f"{obs}_{idx}"):
+                    observaciones.append(obs)
+            if st.checkbox("Otro:", key=f"otro_check_{idx}"):
+                otro_texto = st.text_input("¿Cuál?", key=f"otro_text_{idx}")
+                if otro_texto:
+                    observaciones.append(otro_texto)
 
-            html += "</ul></body></html>"
-            msg.attach(MIMEText(html, "html"))
+            llegada_label = "¿Cómo llegó el equipo?" if st.session_state.tipo_operacion == "Ingreso" else "¿Cómo sale el equipo?"
+            st.markdown(f"**{llegada_label}**")
+            llegada_formas = ["Caja original", "Caja cartón", "Huacal", "Maletín", "Contenedor"]
+            formas = [f for f in llegada_formas if st.checkbox(f, key=f"{f}_{idx}")]
 
-            # Envío del correo
-            server = smtplib.SMTP("smtp.gmail.com", 587)
-            server.starttls()
-            server.login("tucorreo@dominio.com", "tu_contraseña")
-            server.send_message(msg)
-            server.quit()
+            st.markdown("**Fotos del equipo (mínimo 4):**")
+            fotos = st.file_uploader("Seleccionar fotos", accept_multiple_files=True, key=f"fotos_{idx}", type=["png", "jpg", "jpeg"])
 
-            st.success("Correo enviado correctamente.")
-            st.session_state.lista_equipos.clear()
-        except Exception as e:
-            st.error(f"Ocurrió un error al enviar el correo: {e}")
+            equipo.update({
+                "tipo": tipo,
+                "serial": serial,
+                "accesorios": accesorios,
+                "observaciones": observaciones,
+                "formas": formas,
+                "fotos": fotos
+            })
 
+    st.divider()
+
+    if st.button("Enviar reporte"):
+        if not cliente or not ingeniero or not movimiento:
+            st.error("Por favor completa todos los campos generales.")
+        else:
+            for idx, eq in enumerate(st.session_state.equipos):
+                if not eq.get("fotos") or len(eq["fotos"]) < 4:
+                    st.error(f"El equipo {idx + 1} debe tener al menos 4 fotos.")
+                    st.stop()
+
+            try:
+                from_email = "rianonicolle1101@gmail.com"
+                password = "pmfb qjwu rnyc bojy"
+                smtp_server = "smtp.gmail.com"
+                smtp_port = 587
+                correo_destino = correos_ingenieros.get(ingeniero)
+                correo_fijo = "mejiah5@medtronic.com"
+
+                msg = MIMEMultipart('related')
+                msg["From"] = from_email
+                msg["To"] = f"{correo_destino}, {correo_fijo}"
+                msg["Subject"] = f"{st.session_state.tipo_operacion} ST - Movimiento/Delivery: {movimiento}"
+
+                html = f"""<html><body>
+                <p><b>{'Ingreso a Servicio Técnico' if st.session_state.tipo_operacion == 'Ingreso' else 'Salida de Servicio Técnico'}</b></p>
+                <p><b>Cliente:</b> {cliente}<br>
+                <b>Ingeniero:</b> {ingeniero}<br>
+                <b>Movimiento / Delivery:</b> {movimiento}</p>
+                <p><b>Equipos registrados:</b></p>
+                """
+
+                img_cids = []
+                img_index = 0
+
+                for idx, eq in enumerate(st.session_state.equipos):
+                    obs = ", ".join(eq.get("observaciones", [])) or "Ninguna"
+                    formas = ", ".join(eq.get("formas", [])) or "No especificada"
+                    fotos = eq.get("fotos", [])
+
+                    html += f"""<p><b>Equipo {idx + 1}:</b><br>
+                    <b>- Tipo:</b> {eq['tipo']}<br>
+                    <b>- Serial:</b> {eq['serial']}<br>
+                    <b>- Accesorios:</b> {eq['accesorios']}<br>
+                    <b>- Observaciones físicas:</b> {obs}<br>
+                    <b>- Forma de {'llegada' if st.session_state.tipo_operacion == 'Ingreso' else 'salida'}:</b> {formas}<br>
+                    <b>- Número de fotos:</b> {len(fotos)}</p>"""
+
+                    for foto in fotos:
+                        cid = f"image{img_index}"
+                        img_index += 1
+                        img_cids.append((foto, cid))
+                        html += f'<img src="cid:{cid}" style="max-width:400px;"><br>'
+
+                html += """<p style="font-style: italic; color: #555; font-size: 12px; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px;">
+                Este mensaje ha sido generado automáticamente por el Departamento de Servicio Técnico de <b>Medtronic</b>.</p></body></html>"""
+
+                msg.attach(MIMEText(html, "html"))
+
+                for foto, cid in img_cids:
+                    img = MIMEImage(foto.read())
+                    img.add_header("Content-ID", f"<{cid}>")
+                    img.add_header("Content-Disposition", "inline", filename=foto.name)
+                    msg.attach(img)
+
+                server = smtplib.SMTP(smtp_server, smtp_port)
+                server.starttls()
+                server.login(from_email, password)
+                server.send_message(msg)
+                server.quit()
+
+                st.success("Correo enviado correctamente.")
+                reiniciar()
+
+            except Exception as e:
+                st.error(f"No se pudo enviar el correo: {e}")
 
 
 
