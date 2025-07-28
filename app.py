@@ -10,21 +10,35 @@ import os
 # Configuración de página
 st.set_page_config(page_title="Registro Medtronic", layout="centered", page_icon="🩺")
 
-# Estilos visuales
-st.markdown("""
+# Estados iniciales
+if "step" not in st.session_state:
+    st.session_state.step = "inicio"
+if "tipo_operacion" not in st.session_state:
+    st.session_state.tipo_operacion = None
+if "equipos" not in st.session_state:
+    st.session_state.equipos = []
+
+# Determinar título dinámico
+if st.session_state.step == "form":
+    titulo_encabezado = f"{st.session_state.tipo_operacion} - Registro de equipos"
+else:
+    titulo_encabezado = "Registro de equipos"
+
+# Estilos y encabezado
+st.markdown(f"""
     <style>
-    .stApp {
+    .stApp {{
         background-color: white;
-    }
-    .title {
+    }}
+    .title {{
         text-align: center;
         font-size: 22px;
         color: #000000;
         font-family: 'Arial', sans-serif;
         margin-top: 20px;
         margin-bottom: 30px;
-    }
-    .stButton>button {
+    }}
+    .stButton>button {{
         width: 200px;
         height: 40px;
         background-color: #002d5d;
@@ -33,11 +47,11 @@ st.markdown("""
         border-radius: 8px;
         margin: auto;
         display: block;
-    }
-    .stButton>button:hover {
+    }}
+    .stButton>button:hover {{
         background-color: #0053a6;
-    }
-    .encabezado {
+    }}
+    .encabezado {{
         background-color: #002d5d;
         color: white;
         padding: 10px 20px;
@@ -45,49 +59,38 @@ st.markdown("""
         align-items: center;
         border-radius: 8px;
         margin-bottom: 30px;
-    }
-    .encabezado img {
+    }}
+    .encabezado img {{
         height: 50px;
         margin-right: 20px;
-    }
-    .encabezado-texto {
+    }}
+    .encabezado-texto {{
         display: flex;
         flex-direction: column;
-    }
-    .encabezado-texto h1 {
+    }}
+    .encabezado-texto h1 {{
         margin: 0;
         font-size: 20px;
-    }
-    .encabezado-texto p {
+    }}
+    .encabezado-texto p {{
         margin: 0;
         font-size: 12px;
-    }
+    }}
     </style>
-""", unsafe_allow_html=True)
 
-# Encabezado azul
-st.markdown(f"""
-<div class="encabezado">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Medtronic_logo.svg/2560px-Medtronic_logo.svg.png" alt="Logo">
-    <div class="encabezado-texto">
-        <h1>Registro de equipos</h1>
-        <p>Información confidencial - Uso exclusivo de Medtronic</p>
+    <div class="encabezado">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Medtronic_logo.svg/2560px-Medtronic_logo.svg.png" alt="Logo">
+        <div class="encabezado-texto">
+            <h1>{titulo_encabezado}</h1>
+            <p>Información confidencial - Uso exclusivo de Medtronic</p>
+        </div>
     </div>
-</div>
 """, unsafe_allow_html=True)
 
 # Datos iniciales
 correos_ingenieros = {
     "Nicolle Riaño": "nicolle.n.riano@medtronic.com"
 }
-
-# Estados iniciales
-if "step" not in st.session_state:
-    st.session_state.step = "inicio"
-if "tipo_operacion" not in st.session_state:
-    st.session_state.tipo_operacion = None
-if "equipos" not in st.session_state:
-    st.session_state.equipos = []
 
 # Función para reiniciar
 def reiniciar():
@@ -182,7 +185,16 @@ if st.session_state.step == "form":
                 msg["To"] = f"{correo_destino}, {correo_fijo}"
                 msg["Subject"] = f"{st.session_state.tipo_operacion} ST - Movimiento/Delivery: {movimiento}"
 
+                # Logo como imagen CID
+                with open("logo_medtronic.png", "rb") as logo_file:
+                    logo_data = logo_file.read()
+                logo_img = MIMEImage(logo_data)
+                logo_img.add_header("Content-ID", "<logoCID>")
+                logo_img.add_header("Content-Disposition", "inline", filename="logo_medtronic.png")
+                msg.attach(logo_img)
+
                 html = f"""<html><body>
+                <img src="cid:logoCID" style="height:50px;"><br><br>
                 <p><b>{'Ingreso a Servicio Técnico' if st.session_state.tipo_operacion == 'Ingreso' else 'Salida de Servicio Técnico'}</b></p>
                 <p><b>Cliente:</b> {cliente}<br>
                 <b>Ingeniero:</b> {ingeniero}<br>
@@ -234,6 +246,7 @@ if st.session_state.step == "form":
 
             except Exception as e:
                 st.error(f"No se pudo enviar el correo: {e}")
+
 
 
 
