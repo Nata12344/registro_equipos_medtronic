@@ -7,7 +7,7 @@ from email.mime.image import MIMEImage
 import base64
 import os
 
-# Datos iniciales
+# Diccionario de correos
 correos_ingenieros = {
     "Nicolle Riaño": "nicolle.n.riano@medtronic.com"
 }
@@ -24,7 +24,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Pantalla inicial
+# Variables de sesión
 if "step" not in st.session_state:
     st.session_state.step = "inicio"
 if "tipo_operacion" not in st.session_state:
@@ -32,7 +32,7 @@ if "tipo_operacion" not in st.session_state:
 if "equipos" not in st.session_state:
     st.session_state.equipos = []
 
-# Función para reiniciar
+# Función para reiniciar estado
 def reiniciar():
     st.session_state.step = "inicio"
     st.session_state.tipo_operacion = None
@@ -40,14 +40,28 @@ def reiniciar():
 
 # Pantalla de inicio
 if st.session_state.step == "inicio":
-    col1, col2, col3 = st.columns([1, 2, 1])
+    st.markdown(
+        """
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        """,
+        unsafe_allow_html=True,
+    )
+
+    try:
+        logo = Image.open("logo_medtronic.png")
+        st.image(logo, width=200)
+    except Exception as e:
+        st.warning("No se pudo cargar el logo.")
+
+    st.markdown(
+        """
+        <h1 style="font-weight: 800; margin-top: 20px;">¿Qué deseas registrar?</h1>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2, col3 = st.columns([1.5, 1, 1.5])
     with col2:
-        try:
-            logo = Image.open("logo_medtronic.png")
-            st.image(logo, width=200)
-        except Exception as e:
-            st.warning("No se pudo cargar el logo.")
-        st.title("¿Qué deseas registrar?")
         if st.button("Ingreso"):
             st.session_state.tipo_operacion = "Ingreso"
             st.session_state.step = "form"
@@ -55,7 +69,9 @@ if st.session_state.step == "inicio":
             st.session_state.tipo_operacion = "Salida"
             st.session_state.step = "form"
 
-# Pantalla principal del formulario
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# Pantalla de formulario
 if st.session_state.step == "form":
     st.markdown(f"### {st.session_state.tipo_operacion} - Registro de equipos")
     st.markdown("#### Información general")
@@ -67,11 +83,9 @@ if st.session_state.step == "form":
     st.divider()
     st.markdown("### Equipos registrados")
 
-    # Botón para agregar un nuevo equipo
     if st.button("Agregar equipo"):
         st.session_state.equipos.append({})
 
-    # Formulario por equipo
     for idx, equipo in enumerate(st.session_state.equipos):
         with st.expander(f"Equipo {idx + 1}", expanded=True):
             tipo = st.selectbox(f"Tipo de equipo {idx + 1}:", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{idx}")
@@ -108,7 +122,6 @@ if st.session_state.step == "form":
 
     st.divider()
 
-    # Enviar correo
     if st.button("Enviar reporte"):
         if not cliente or not ingeniero or not movimiento:
             st.error("Por favor completa todos los campos generales.")
@@ -183,6 +196,7 @@ if st.session_state.step == "form":
 
             except Exception as e:
                 st.error(f"No se pudo enviar el correo: {e}")
+
 
 
 
