@@ -62,13 +62,11 @@ def reiniciar():
 # Pantalla de inicio
 if st.session_state.step == "inicio":
     st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
-
     try:
         logo = Image.open("logo_medtronic.png")
         st.image(logo, width=200)
     except:
         st.warning("No se pudo cargar el logo.")
-
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown('<p class="title">¿Qué deseas registrar?</p>', unsafe_allow_html=True)
 
@@ -97,11 +95,18 @@ if st.session_state.step == "form":
     if st.button("Agregar equipo"):
         st.session_state.equipos.append({})
 
+    equipos_a_eliminar = []
+
     for idx, equipo in enumerate(st.session_state.equipos):
         with st.expander(f"Equipo {idx + 1}", expanded=True):
-            tipo = st.selectbox(f"Tipo de equipo {idx + 1}:", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{idx}")
-            serial = st.text_input("Serial:", key=f"serial_{idx}")
-            accesorios = st.text_input("Accesorios:", key=f"accesorios_{idx}")
+            col_eq1, col_eq2 = st.columns([4, 1])
+            with col_eq1:
+                tipo = st.selectbox(f"Tipo de equipo {idx + 1}:", ["WEM", "ForceTriad", "FX", "PB840", "PB980", "BIS VISTA", "CONSOLA DE CAMARA"], key=f"tipo_{idx}")
+                serial = st.text_input("Serial:", key=f"serial_{idx}")
+                accesorios = st.text_input("Accesorios:", key=f"accesorios_{idx}")
+            with col_eq2:
+                if st.button(f"❌ Eliminar equipo {idx + 1}", key=f"eliminar_{idx}"):
+                    equipos_a_eliminar.append(idx)
 
             st.markdown("**Observaciones físicas:**")
             observaciones = []
@@ -130,6 +135,11 @@ if st.session_state.step == "form":
                 "formas": formas,
                 "fotos": fotos
             })
+
+    if equipos_a_eliminar:
+        for i in sorted(equipos_a_eliminar, reverse=True):
+            del st.session_state.equipos[i]
+        st.experimental_rerun()
 
     st.divider()
 
