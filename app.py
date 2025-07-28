@@ -122,6 +122,12 @@ if st.session_state.step == "form":
 
     st.divider()
 
+    # Botón para volver al menú principal
+    if st.button("Volver al menú principal"):
+        reiniciar()
+        st.experimental_rerun()
+
+    # Enviar correo
     if st.button("Enviar reporte"):
         if not cliente or not ingeniero or not movimiento:
             st.error("Por favor completa todos los campos generales.")
@@ -196,6 +202,7 @@ if st.session_state.step == "form":
 
             except Exception as e:
                 st.error(f"No se pudo enviar el correo: {e}")
+
 
 
 
