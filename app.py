@@ -10,7 +10,7 @@ import os
 # Configuración de página
 st.set_page_config(page_title="Registro Medtronic", layout="centered", page_icon="🩺")
 
-# Estilo visual
+# Estilos visuales
 st.markdown("""
     <style>
     .stApp {
@@ -37,7 +37,43 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #0053a6;
     }
+    .encabezado {
+        background-color: #002d5d;
+        color: white;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    .encabezado img {
+        height: 50px;
+        margin-right: 20px;
+    }
+    .encabezado-texto {
+        display: flex;
+        flex-direction: column;
+    }
+    .encabezado-texto h1 {
+        margin: 0;
+        font-size: 20px;
+    }
+    .encabezado-texto p {
+        margin: 0;
+        font-size: 12px;
+    }
     </style>
+""", unsafe_allow_html=True)
+
+# Encabezado azul
+st.markdown(f"""
+<div class="encabezado">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Medtronic_logo.svg/2560px-Medtronic_logo.svg.png" alt="Logo">
+    <div class="encabezado-texto">
+        <h1>Registro de equipos</h1>
+        <p>Información confidencial - Uso exclusivo de Medtronic</p>
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 # Datos iniciales
@@ -61,15 +97,6 @@ def reiniciar():
 
 # Pantalla de inicio
 if st.session_state.step == "inicio":
-    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
-
-    try:
-        logo = Image.open("logo_medtronic.png")
-        st.image(logo, width=200)
-    except:
-        st.warning("No se pudo cargar el logo.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown('<p class="title">¿Qué deseas registrar?</p>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -207,6 +234,7 @@ if st.session_state.step == "form":
 
             except Exception as e:
                 st.error(f"No se pudo enviar el correo: {e}")
+
 
 
 
