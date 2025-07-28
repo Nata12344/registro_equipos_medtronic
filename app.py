@@ -59,28 +59,28 @@ def reiniciar():
     st.session_state.tipo_operacion = None
     st.session_state.equipos = []
 
-# Pantalla de inicio
+# Sidebar con logo y selección
 if st.session_state.step == "inicio":
-    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
+    with st.sidebar:
+        try:
+            logo = Image.open("logo_medtronic.png")
+            st.image(logo, width=180)
+        except:
+            st.warning("No se pudo cargar el logo.")
 
-    try:
-        logo = Image.open("logo_medtronic.png")
-        st.image(logo, width=200)
-    except:
-        st.warning("No se pudo cargar el logo.")
+        st.markdown('<p style="font-weight:bold; font-size:16px; margin-top:10px;">Información confidencial</p>', unsafe_allow_html=True)
+        st.markdown('<p style="font-size:14px;">Uso exclusivo de Medtronic</p>', unsafe_allow_html=True)
+        st.markdown("### ¿Qué deseas registrar?")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown('<p class="title">¿Qué deseas registrar?</p>', unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
         if st.button("Ingreso"):
             st.session_state.tipo_operacion = "Ingreso"
             st.session_state.step = "form"
-        st.write("")
+
         if st.button("Salida"):
             st.session_state.tipo_operacion = "Salida"
             st.session_state.step = "form"
+
+    st.markdown('<p class="title">Selecciona una opción en el menú lateral.</p>', unsafe_allow_html=True)
 
 # Pantalla principal del formulario
 if st.session_state.step == "form":
