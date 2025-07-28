@@ -143,7 +143,7 @@ if st.session_state.step == "form":
 
     st.divider()
 
-    if st.button("Enviar reporte"):
+    if st.button("Enviar"):
         if not cliente or not ingeniero or not movimiento:
             st.error("Por favor completa todos los campos generales.")
         else:
